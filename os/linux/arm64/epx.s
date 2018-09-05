@@ -50,13 +50,13 @@
           .equ out1, p_out + 4
 
     id:     .skip 4
+    efd:    .skip 4 
     s:      .skip 4
 
     .ifdef BIND
     s2:   .skip 4
     .endif
 
-    efd:    .skip 4
     evts:   .skip 16
           .equ events, evts + 0
           .equ data_fd,evts + 8
@@ -172,14 +172,13 @@ opn_con:
 
     // accept (s, 0, 0);
     mov     x8, #SYS_accept
-    mov     x2, xzr
+    mov     x2, xzr 
     mov     x1, xzr
     ldr     w0, [sp, #s]
     svc     0
 
     ldr     w1, [sp, #s]      // load binding socket
-    str     w0, [sp, #s]      // save peer socket as s
-    str     w1, [sp, #s2]     // save binding socket as s2
+    stp     w0, w1, [sp, #s]
 .else
     // connect (s, &sa, sizeof(sa));
     mov     x8, #SYS_connect
@@ -198,8 +197,7 @@ poll_init:
     // epoll_ctl(efd, EPOLL_CTL_ADD, fd, &evts);
     mov     x8, #SYS_epoll_ctl
     mov     x3, #EPOLLIN
-    str     x3, [sp, #events]   // evts.events = EPOLLIN
-    str     w2, [sp, #data_fd]
+    stp     x3, x2, [sp, #evts]
     add     x3, sp, #evts       // x3 = &evts
     mov     x1, #EPOLL_CTL_ADD  // x1 = EPOLL_CTL_ADD
     ldr     w0, [sp, #efd]      // w0 = efd
@@ -222,15 +220,13 @@ poll_wait:
     tbnz    x0, #31, cls_efd
 
     // if (!(evts.events & EPOLLIN)) break;
-    ldr     w0, [sp, #events]
+    ldp     x0, x1, [sp, evts] 
     tbz     w0, #0, cls_efd
 
-    ldr     x0, [sp, #data_fd]
     ldr     w3, [sp, #s]
-    ldr     w4, [sp, #out0]
-    ldr     w5, [sp, #in1]
+    ldp     w5, w4, [sp, #in1] 
 
-    cmp     w0, w3
+    cmp     w1, w3
     // r = (fd == s) ? s : out[0];
     csel    w0, w3, w4, eq
     // w = (fd == s) ? in[1] : s;
@@ -254,9 +250,8 @@ cls_efd:
     // epoll_ctl(efd, EPOLL_CTL_DEL, s, NULL);
     mov     x8, #SYS_epoll_ctl
     mov     x3, xzr
-    ldr     w2, [sp, #s]
     mov     x1, #EPOLL_CTL_DEL
-    ldr     w0, [sp, #efd]
+    ldp     w0, w2, [sp, #efd] 
     svc     0
 
     // epoll_ctl(efd, EPOLL_CTL_DEL, out[0], NULL);

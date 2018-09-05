@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
           r = epoll_pwait(efd, &evts, 1, -1, NULL);
                   
           // error? bail out           
-          if (r<=0) break;
+          if (r < 0) break;
          
           // not input? bail out
           if (!(evts.events & EPOLLIN)) break;

@@ -59,7 +59,7 @@
     efd:    .skip 4
     evts:   .skip 16
           .equ events, evts + 0
-          .equ data_fd,evts + 8
+          .equ data_fd,evts + 4
 
     buf:    .skip BUFSIZ
     ds_tbl_size:

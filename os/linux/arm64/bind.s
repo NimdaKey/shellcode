@@ -64,6 +64,8 @@ _start:
     mov     w0, w6
     svc     0    
     
+    mov     w6, w0
+ 
     // in this order
     //
     // dup3(s, FILENO_STDERR, 0);

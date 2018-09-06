@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
       #endif
       
       // if ok
-      if(r>=0){
+      if(r >= 0){
         // open an epoll file descriptor
         efd = epoll_create1(0);
  
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
           r = epoll_wait(efd, &evts, 1, -1);
                   
           // error? bail out           
-          if (r<=0) break;
+          if (r < 0) break;
          
           // not input? bail out
           if (!(evts.events & EPOLLIN)) break;

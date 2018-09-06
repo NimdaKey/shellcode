@@ -27,7 +27,8 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
   
-    .arch armv6
+    .arch armv7-a
+    .align 4
     
     .include "include.inc"
     
@@ -59,9 +60,8 @@ _start:
     push   {r0, r1, r2, r3}
     eor    r2, r2         // penv = NULL
     mov    r1, sp         // r1 = argv
-    mov    r7, #11        // r7 = execve
-    svc    1  
-    nop
+    mov    r7, #SYS_execve
+    svc    1
 cmd:
     .ascii "echo Hello, World!"
 

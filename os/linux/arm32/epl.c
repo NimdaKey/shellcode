@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
         sa.sin_addr.s_addr = INADDR_ANY;
         
         bind(s, (struct sockaddr*)&sa, sizeof(sa));
-        listen(s, 0);
+        listen(s, 1);
         r = accept(s, 0, 0);
         s2 = s; s=r;
       #else
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
           r = epoll_wait(efd, &evts, 1, -1);
                   
           // error? bail out           
-          if (r<=0) break;
+          if (r < 0) break;
          
           // not input? bail out
           if (!(evts.events & EPOLLIN)) break;

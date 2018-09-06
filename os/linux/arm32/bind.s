@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
   
-    .arch armv6
+    .arch armv7-a
     
     .include "include.inc"
     

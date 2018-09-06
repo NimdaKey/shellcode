@@ -41,27 +41,27 @@
     // structure for stack variables
 
           .struct 0
-    p_in:   .skip 8
+    p_in: .skip 8
           .equ in0, p_in + 0
           .equ in1, p_in + 4
 
-    p_out:  .skip 8
+    p_out:.skip 8
           .equ out0, p_out + 0
           .equ out1, p_out + 4
 
-    id:     .skip 4
-    efd:    .skip 4 
-    s:      .skip 4
+    id:   .skip 4
+    efd:  .skip 4 
+    s:    .skip 4
 
     .ifdef BIND
     s2:   .skip 4
     .endif
 
-    evts:   .skip 16
+    evts: .skip 16
           .equ events, evts + 0
           .equ data_fd,evts + 8
 
-    buf:    .skip BUFSIZ
+    buf:  .skip BUFSIZ
     ds_tbl_size:
 
     .global _start

@@ -42,27 +42,27 @@
     // structure for stack variables
 
           .struct 0
-    p_in:   .skip 8
+    p_in: .skip 8
           .equ in0, p_in + 0
           .equ in1, p_in + 4
       
-    p_out:  .skip 8
+    p_out:.skip 8
           .equ out0, p_out + 0
           .equ out1, p_out + 4
       
-    pid:    .skip 4
-    s:      .skip 4
+    pid:  .skip 4
+    s:    .skip 4
 
     .ifdef BIND
     s2:   .skip 4
     .endif
 
-    efd:    .skip 4
-    evts:   .skip 16
+    efd:  .skip 4
+    evts: .skip 16
           .equ events, evts + 0
           .equ data_fd,evts + 8
       
-    buf:    .skip BUFSIZ
+    buf:  .skip BUFSIZ
     ds_tbl_size:
 
     .global _start
@@ -183,12 +183,12 @@ opn_con:
     str     r0, [sp, #s]      // save peer socket as s
     str     r1, [sp, #s2]     // save binding socket as s2
 .else
-      // connect (s, &sa, sizeof(sa)); 
-      movw    r7, #SYS_connect
-      svc     0  
-      pop     {r3, r4}       // release &sa
-      tst     r0, r0
-      bne     cls_sck        // if(r0 != 0) goto cls_sck
+    // connect (s, &sa, sizeof(sa)); 
+    movw    r7, #SYS_connect
+    svc     0  
+    pop     {r3, r4}       // release &sa
+    tst     r0, r0
+    bne     cls_sck        // if(r0 != 0) goto cls_sck
 .endif 
     // efd = epoll_create1(0);
     movw    r7, #SYS_epoll_create1

